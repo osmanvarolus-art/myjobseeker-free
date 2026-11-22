@@ -16,7 +16,7 @@
     <button data-tab="model">3. Model</button>
     <button data-tab="jobs">4. Jobs</button>
   </nav>
-  <div id="quota" class="quota" title="Free tier: 3 CV + cover letter pairs per calendar month"></div>
+  <div id="quota" class="quota" title="Free tier: up to three CV and cover letter generations per calendar month"></div>
 </header>
 
 <main>
@@ -24,8 +24,8 @@
     <h1>Three steps, then paste a job</h1>
     <ol id="checklist" class="checklist"></ol>
     <div class="card muted">
-      <p><b>Free tier:</b> 3 CV + cover letter pairs per month. Writing the same job again, and every edit you make, is free.</p>
-      <p><b>Private by design:</b> your profile, rules and documents are saved only in <code id="datafolder"></code>. Nothing is uploaded.</p>
+      <p><b>Free tier:</b> generate up to three CV and cover letter pairs per calendar month. Editing and downloading existing drafts are unlimited.</p>
+      <p><b>Stored locally:</b> your profile, rules and drafts are saved in <code id="datafolder"></code>. The app uploads nothing. If you connect a cloud-backed command-line tool as your model, that tool may send profile and job-ad text to its provider and use your account's quota or incur charges.</p>
     </div>
   </section>
 
@@ -75,7 +75,7 @@
 
   <section id="tab-model" class="tab">
     <h1>Connect a model (optional)</h1>
-    <p class="muted">Without a model the app still checks fit and builds a first version from your own profile text. A model writes a more tailored one. Only a model on this computer is used: no API key, no bill.</p>
+    <p class="muted">Without a model the app still checks fit and builds a first version from your own profile text. A model writes a more tailored one. The app talks only to a model server on this computer or a command you choose. A local model costs nothing; a cloud-backed command sends the profile and job text to its provider and uses your own account.</p>
     <label class="check"><input type="radio" name="mk" value="none"> No model</label>
     <label class="check"><input type="radio" name="mk" value="local"> A local model server (Ollama, LM Studio, llama.cpp)</label>
     <div class="indent grid2">

@@ -55,13 +55,24 @@ class FreeTier(Base):
         app.write_documents(self.job()["id"], use_model=False, today=dt.date(2026, 4, 1))
         self.assertEqual(app.usage(dt.date(2026, 4, 1))["used"], 1)
 
-    def test_writing_the_same_job_again_is_free(self):
+    def test_every_generation_uses_one_also_for_the_same_job(self):
         day = dt.date(2026, 5, 2)
         job = self.job()
-        for _ in range(4):
+        for _ in range(3):
             app.write_documents(job["id"], use_model=False, today=day)
-        self.assertEqual(app.usage(day)["used"], 1)
-        self.assertEqual(len(app.load_job(job["id"])["versions"]), 4)
+        self.assertEqual(app.usage(day)["used"], 3)
+        with self.assertRaises(app.QuotaError):  # a fourth generation for the same job
+            app.write_documents(job["id"], use_model=False, today=day)
+        self.assertEqual(len(app.load_job(job["id"])["versions"]), 3)
+
+    def test_the_fourth_generation_for_a_different_job_is_refused(self):
+        day = dt.date(2026, 5, 3)
+        job = self.job()
+        for _ in range(3):
+            app.write_documents(job["id"], use_model=False, today=day)
+        with self.assertRaises(app.QuotaError) as caught:
+            app.write_documents(self.job("Planner", "Other Co")["id"], use_model=False, today=day)
+        self.assertIn("Editing and downloading existing drafts are unlimited", str(caught.exception))
 
     def test_edits_are_free(self):
         day = dt.date.today()
@@ -194,6 +205,10 @@ class WebApi(Base):
         status, page = self.call("GET", f"/view/{ids[0]}/cv")
         self.assertEqual(status, 200)
         self.assertIn(b"Jordan Example", page)
+        self.assertEqual(self.call("POST", f"/api/jobs/{ids[0]}/write", {"use_model": False})[0], 429)  # same job, 4th generation
+        self.assertEqual(self.call("GET", f"/view/{ids[1]}/letter")[0], 200)  # existing drafts still open after the limit
+        doc = json.loads(self.call("GET", f"/api/jobs/{ids[2]}")[1])["versions"][-1]
+        self.assertEqual(self.call("POST", f"/api/jobs/{ids[2]}/edit", {"doc": doc})[0], 200)  # and can still be edited
 
     def test_a_foreign_host_and_a_cross_site_post_are_refused(self):
         self.assertEqual(self.call("GET", "/api/state", headers={"Host": "evil.example"})[0], 403)

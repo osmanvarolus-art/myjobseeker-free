@@ -1,34 +1,41 @@
 # MyJobSeeker
 
-**Paste a job ad. See how well you fit. Get a tailored CV and cover letter that only says true things about you.**
+**Build your profile once. For each job ad, see which requirements your profile covers, draft a tailored CV and
+cover letter, review flagged claims, and export both as PDFs.**
 
-MyJobSeeker is a small app that runs on your own computer. You fill in your profile once, set your writing rules,
-and for each job it checks the fit, writes a CV and cover letter, checks them against your rules, and gives you PDFs.
-No account, no upload, no subscription.
+MyJobSeeker is a small app that runs on your own computer. There is no account and no sign-up.
+
+**Sample output** for a fictional candidate and a fictional "Junior Buyer" ad:
+[sample CV (PDF)](docs/samples/sample_cv.pdf) · [sample cover letter (PDF)](docs/samples/sample_cover_letter.pdf)
 
 <p align="center">
-  <img src="assets/readme/app.png" alt="The job screen: fit check with covered and missing requirements, the written cover letter and CV, rule check result, and PDF links." width="100%">
+  <img src="assets/readme/app.png" alt="The job screen: fit check with covered and missing requirements, the drafted cover letter and CV, the rule check result, and PDF links." width="100%">
 </p>
 
 ## Free tier
 
+Generate up to three CV and cover letter pairs per calendar month. Editing and downloading existing drafts are
+unlimited.
+
 | | |
 |---|---|
-| CV + cover letter pairs | **3 per calendar month** (the count starts again on the 1st) |
-| Writing the same job again | free |
-| Editing your documents | free, unlimited |
-| Fit checks, rule checks, PDFs | free, unlimited |
-| Your data | stays on your computer |
+| New CV + cover letter generations | **3 per calendar month**, for any job, including a new version for a job you already drafted. The count starts again on the 1st. |
+| A failed attempt | free: it does not use a generation |
+| Editing drafts, downloading PDFs again | free, unlimited |
+| Fit checks and rule checks | free, unlimited |
 
-The limit is counted on your computer, in your data folder. There is no server and nothing to sign up for.
+The count is kept on your computer, in your data folder. There is no server.
+
+**Premium is not currently available.**
 
 ## Start in two minutes
 
 You need **Python 3.10 or newer**. Nothing else to install.
 
+Download this repository (green **Code** button → **Download ZIP**, then unzip), or clone it with git. Then, in its
+folder:
+
 ```bash
-git clone https://github.com/osmanvarolus-art/myjobseeker-free.git myjobseeker
-cd myjobseeker
 ./start.sh            # Windows: double-click start.bat
 ```
 
@@ -41,24 +48,27 @@ Your browser opens at `http://127.0.0.1:8377`. The app walks you through four st
 3. **Model** (optional). Connect a language model on your computer for more tailored writing. Without one, the app
    still writes a clean first version from your own profile text.
 4. **Jobs.** Paste a job ad. You get a fit score with every requirement marked ✓ (your profile covers it) or ✗ (a
-   gap). Click **Write CV + cover letter**, edit anything you like, and download the PDFs.
+   gap). Click **Generate CV + cover letter**, edit anything you like, and download the PDFs.
 
-## Why the documents stay true
+## What the checks catch, and what they do not
 
-Every CV and letter goes through your rules before you see it. The checks are plain code, not a model's opinion:
+Every draft goes through your rules before you see it. The checks are plain code, not a model's opinion:
 
-- **No invented numbers.** Any figure that is not in your profile is flagged ("cut costs by 37%" when your profile
-  never says 37).
-- **No invented employers.** The CV may only name companies that are in your profile.
+- **Numbers that are not in your profile** are flagged ("cut costs by 37%" when your profile never says 37).
+- **Employers that are not in your profile** are flagged on the CV.
 - **Your banned phrases** and **your must-mention items** are checked on every version.
-- **Length and sentence limits** keep letters readable.
+- **Letter length and sentence length** follow your limits.
 
-When a model breaks a rule, the app sends the list of problems back and asks it to repair them once. Anything still
-wrong is shown in red next to your document, so you decide.
+When a model breaks a rule, the app lists the problems and asks it to repair them once. Anything still wrong is shown
+in red next to your draft.
+
+The checks do not prove that every sentence is true. A model can still overstate a skill in words the checks cannot
+see. Read each draft before you send it: you are the final check.
 
 ## Connect a model (optional)
 
-The app only talks to a model **on your own computer**. It refuses any internet address, so it can never run up a bill.
+The app connects only to a model server on your own computer (it refuses internet addresses) or to a command you
+choose. A local model costs nothing.
 
 **Ollama (free, local):**
 
@@ -69,8 +79,11 @@ ollama pull qwen3:8b
 In the app: *Model* → *A local model server* → address `http://127.0.0.1:11434`, model `qwen3:8b` → *Test the model*.
 LM Studio and llama.cpp work the same way (any OpenAI-compatible server on localhost).
 
-**A command-line tool you already pay for** (Claude Code, Codex CLI, Gemini CLI): *Model* → *A command I already use*
-→ for example `claude -p`. The prompt goes to the command's input and the answer is read from its output.
+**A command-line tool you already use** (Claude Code, Codex CLI, Gemini CLI): *Model* → *A command I already use* →
+for example `claude -p`. The prompt goes to the command's input and the answer is read from its output.
+
+> Your profile and drafts are stored locally. If you connect a cloud-backed command-line tool, it may send profile and
+> job-ad text to its provider and use your account's quota or incur charges.
 
 ## PDFs
 
@@ -79,19 +92,21 @@ If Chrome, Chromium, Brave or Edge is installed, *CV as PDF* and *Letter as PDF*
 
 ## Your data
 
-Everything lives in one folder outside this repository: `~/.myjobseeker` (change it with `MYJOBSEEKER_HOME`).
+Your profile and drafts are stored locally, in one folder outside this repository: `~/.myjobseeker` (change it with
+`MYJOBSEEKER_HOME`). The app itself uploads nothing and has no telemetry. A cloud-backed model command, if you
+connect one, is the exception described above.
 
 ```
 ~/.myjobseeker/
   profile.json    your facts
   rules.json      your writing rules
   settings.json   your model choice
-  usage.json      this month's count
-  jobs/           one file per job, with every version you wrote or edited
+  usage.json      this month's generations
+  jobs/           one file per job, with every version you generated or edited
 ```
 
-Because it is outside the repository, you can fork or update the code without ever committing your personal data.
-Back up that folder to keep your work; delete it to start over.
+Because it is outside the repository, you can fork or update the code without committing your personal data. Back up
+that folder to keep your work; delete it to start over.
 
 ## Settings
 
@@ -119,6 +134,9 @@ python3 -m pytest tests                              # everything
 
 The app is one Python file (`app/myjobseeker.py`, standard library only) plus a static page in `app/static/`.
 
-## License
+## License and credits
 
-MIT. See [LICENSE](LICENSE). Original framework © Mads Lorentzen and the ai-job-search contributors.
+- Code: MIT, see [LICENSE](LICENSE). Original framework © Mads Lorentzen and the
+  [ai-job-search](https://github.com/ai-job-search-dev/ai-job-search) contributors.
+- Images and samples: see [docs/ASSETS.md](docs/ASSETS.md) for where each image, font and sample file comes from and
+  its license.

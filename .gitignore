@@ -128,3 +128,4 @@ profile.json
 rules.json
 usage.json
 !assets/readme/app.png
+!docs/samples/*.pdf

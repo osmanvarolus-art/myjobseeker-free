@@ -229,6 +229,7 @@ ALLOWED_IGNORE_NEGATIONS = {
     "!cover_letters/cover_example.tex",
     "!documents/**/.gitkeep",
     "!assets/readme/app.png",  # the README screenshot (sample person only)
+    "!docs/samples/*.pdf",  # sample CV and letter of the fictional example person
 }
 
 # Fork-local extension of the negation allowlist. A fork that adds its own tracked

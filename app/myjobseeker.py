@@ -80,8 +80,8 @@ def month_key(today=None):
 
 
 def usage(today=None):
-    """How many of this month's pairs are used, and which jobs used them. A job counts once per month:
-    writing the same job again (a new version after an edit of the posting or the rules) is free."""
+    """This month's generations. Every successful new CV + cover letter pair uses one, also for a job written before.
+    Failed attempts, your own edits and downloading existing documents use nothing."""
     today = today or dt.date.today()
     data = read_json(home() / "usage.json", {})
     used = data.get(month_key(today), [])
@@ -90,29 +90,26 @@ def usage(today=None):
     return {"limit": MONTHLY_LIMIT, "used": len(used), "left": max(0, MONTHLY_LIMIT - len(used)), "jobs": used, "resets": resets}
 
 
-def can_write(job_id, today=None):
-    u = usage(today)
-    return job_id in u["jobs"] or u["left"] > 0
+def can_write(job_id=None, today=None):
+    return usage(today)["left"] > 0
 
 
 def charge(job_id, today=None):
-    """Record one pair for this job. Called only after a document was written and saved."""
+    """Record one generated pair. Called only after a document was written and saved."""
     with LOCK:
         path = home() / "usage.json"
         data = read_json(path, {})
-        key = month_key(today)
-        used = data.setdefault(key, [])
-        if job_id not in used:
-            if len(used) >= MONTHLY_LIMIT:
-                raise QuotaError(usage(today))
-            used.append(job_id)
-            write_json(path, data)
+        used = data.setdefault(month_key(today), [])
+        if len(used) >= MONTHLY_LIMIT:
+            raise QuotaError(usage(today))
+        used.append(job_id)
+        write_json(path, data)
 
 
 class QuotaError(Exception):
     def __init__(self, u):
-        super().__init__(f"You have used your {u['limit']} free CV and cover letter pairs this month. "
-                         f"The count starts again on {u['resets']}.")
+        super().__init__(f"You have generated your {u['limit']} CV and cover letter pairs for this month. "
+                         f"The count starts again on {u['resets']}. Editing and downloading existing drafts are unlimited.")
         self.usage = u
 
 

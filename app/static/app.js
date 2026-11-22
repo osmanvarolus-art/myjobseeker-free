@@ -30,7 +30,7 @@ document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click
 
 function showQuota(u) {
   const q = $("quota");
-  q.textContent = `${u.left} of ${u.limit} free pairs left this month · resets ${u.resets}`;
+  q.textContent = `${u.left} of ${u.limit} generations left this month · resets ${u.resets}`;
   q.classList.toggle("empty", u.left === 0);
 }
 
@@ -169,9 +169,8 @@ async function openJob(id) {
   const v = $("jobView");
   const f = JOB.fit || {requirements: []};
   const doc = JOB.versions.length ? JOB.versions[JOB.versions.length - 1] : null;
-  const charged = S.usage.jobs.includes(JOB.id);
-  const writeLabel = charged || doc ? "Write again (free for this job)" : `Write CV + cover letter (uses 1 of ${S.usage.left} left)`;
-  const blocked = !charged && S.usage.left === 0;
+  const writeLabel = `${doc ? "Generate a new version" : "Generate CV + cover letter"} (uses 1 of ${S.usage.left} left)`;
+  const blocked = S.usage.left === 0;
   v.replaceChildren(...[
     el("h1", {}, `${JOB.title} · ${JOB.company}`),
     JOB.url ? el("p", {}, el("a", {href: JOB.url, target: "_blank", rel: "noopener"}, "Open the posting")) : null,
@@ -184,8 +183,8 @@ async function openJob(id) {
       el("p", {class: "muted"}, "✓ means your profile uses the posting's words. ✗ is a gap: be honest about it, or add a true fact to your profile.")),
     el("div", {class: "row"},
       el("button", {id: "btnWrite", onclick: () => write(true), disabled: blocked ? "" : null}, writeLabel),
-      el("button", {class: "ghost", onclick: () => write(false), disabled: blocked ? "" : null}, "Write from my profile only (no model)"),
-      el("span", {id: "writeMsg", class: "msg " + (blocked ? "bad" : "")}, blocked ? `You used your ${S.usage.limit} free pairs this month. They come back on ${S.usage.resets}.` : ""),
+      el("button", {class: "ghost", onclick: () => write(false), disabled: blocked ? "" : null}, "Generate from my profile only (no model)"),
+      el("span", {id: "writeMsg", class: "msg " + (blocked ? "bad" : "")}, blocked ? `You generated your ${S.usage.limit} pairs this month. They come back on ${S.usage.resets}. Editing and downloading existing drafts are unlimited.` : ""),
       el("button", {class: "ghost small", onclick: delJob}, "delete job")),
     doc ? editor(doc) : null,
     el("details", {}, el("summary", {}, "Posting text"), el("pre", {style: "white-space:pre-wrap"}, JOB.posting))].filter(Boolean));
