@@ -126,8 +126,18 @@ def words(text):
     return [w for w in re.findall(r"[a-zà-ÿ0-9+#.]{2,}", (text or "").lower()) if w not in STOP and len(w) > 2]
 
 
+SUFFIXES = ("ations", "ation", "ments", "ment", "ings", "ing", "ers", "er", "ies", "ied", "es", "ed", "ly", "s")
+
+
 def stem(w):
-    return w[:6] if len(w) > 6 else w
+    """A small, predictable stemmer: managing / managed / manager -> manag, deliveries / delivery -> delive."""
+    for suf in SUFFIXES:
+        if w.endswith(suf) and len(w) - len(suf) >= 4:
+            w = w[:-len(suf)]
+            break
+    if len(w) > 4 and w[-1] == w[-2]:
+        w = w[:-1]  # planning -> plann -> plan
+    return w[:6]
 
 
 def profile_text(profile):
@@ -167,7 +177,7 @@ def requirements(posting):
     lines = [ln.strip(" \t-*•·▪–") for ln in raw]
     found = [ln.strip(" \t-*•·▪–") for ln in raw if bullet.match(ln) or REQ_HINT.search(ln)]
     found = [ln for ln in found if 12 <= len(ln) <= 300]
-    if len(found) < 3:
+    if not found:  # no bullet or requirement line: fall back to requirement-like sentences
         sentences = re.split(r"(?<=[.!?;])\s+", " ".join(lines))
         found = [s.strip() for s in sentences if 12 <= len(s) <= 300 and REQ_HINT.search(s)]
     seen, out = set(), []
@@ -179,18 +189,97 @@ def requirements(posting):
     return out[:30]
 
 
-def fit(profile, posting):
-    corpus = {stem(w) for w in words(profile_text(profile))}
-    reqs = requirements(posting)
-    rows = []
-    for r in reqs:
-        keys = sorted({stem(w) for w in words(r)})
-        hits = [k for k in keys if k in corpus]
-        shown = list(dict.fromkeys(w for w in words(r) if stem(w) in corpus))
-        covered = len(hits) >= max(1, min(2, len(keys) // 4))
-        rows.append({"requirement": r, "covered": covered, "matched": shown[:8]})
-    score = round(100 * sum(r["covered"] for r in rows) / len(rows)) if rows else None
-    return {"score": score, "requirements": rows}
+GENERIC = {stem(w) for w in """experience experienced knowledge strong skills skill ability required requirement plus years year
+good excellent proven solid understanding working familiarity familiar proficiency proficient preferred nice advantage
+least minimum demonstrated track record hands fluent fluency asset bonus ideally ideal relevant similar field area
+including include etc using use level advanced basic expert expertise degree""".split()}
+NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+YEARS_ASKED = re.compile(r"(?i)\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\+?\s*(?:\+\s*)?(?:years?|yrs?|ans|jaar)\b")
+
+
+def years_in(dates, today=None):
+    """'2019 - 2024' -> 5, '2021 - present' -> years until today; None when the dates cannot be read."""
+    found = [int(y) for y in re.findall(r"(?:19|20)\d\d", dates or "")]
+    if not found:
+        return None
+    end = max(found)
+    if re.search(r"(?i)present|now|current|today|aujourd|heden", dates or "") or len(found) == 1:
+        end = (today or dt.date.today()).year
+    return max(0, end - min(found))
+
+
+def evidence_units(profile, today=None):
+    """Pieces of the profile that can support a requirement, each with where it comes from. A requirement is judged
+    against one piece at a time (one experience line with its role, one summary sentence, the skills, the languages,
+    one degree), so keywords scattered across unrelated lines never add up to a match."""
+    units = []
+    for s in re.split(r"(?<=[.!?])\s+", (profile or {}).get("summary", "")):
+        if s.strip():
+            units.append({"text": s.strip(), "context": "", "where": "Summary", "years": None})
+    for x in (profile or {}).get("experience", []):
+        where = f"{x.get('role', '')}, {x.get('company', '')} ({x.get('dates', '')})".strip()
+        years = years_in(x.get("dates"), today)
+        for b in x.get("bullets", []) or [""]:
+            units.append({"text": b.strip() or x.get("role", ""), "context": x.get("role", ""), "where": where, "years": years})
+    if (profile or {}).get("skills"):
+        units.append({"text": ", ".join(profile["skills"]), "context": "", "where": "Skills", "years": None, "list": profile["skills"]})
+    if (profile or {}).get("languages"):
+        units.append({"text": ", ".join(profile["languages"]), "context": "", "where": "Languages", "years": None, "list": profile["languages"]})
+    for x in (profile or {}).get("education", []):
+        units.append({"text": f"{x.get('degree', '')}, {x.get('school', '')}", "context": "", "where": f"Education ({x.get('dates', '')})", "years": None})
+    return units
+
+
+def judge(requirement, units):
+    """One requirement against the profile: supported, partial or none, with the exact profile text that supports it."""
+    keys = {}
+    for w in words(requirement):
+        k = stem(w)
+        if k not in GENERIC and not w.isdigit() and w not in NUMBER_WORDS:
+            keys.setdefault(k, w)
+    asked = YEARS_ASKED.search(requirement)
+    years_needed = None
+    if asked:
+        n = asked.group(1).lower()
+        years_needed = NUMBER_WORDS.get(n) or int(n)
+    if not keys:
+        return {"requirement": requirement, "status": "none", "covered": False, "evidence": [], "found": [], "missing": [],
+                "reason": "no specific skill or task to check in this line"}
+    best, best_hits = None, set()
+    for u in units:
+        ukeys = {stem(w) for w in words(u["text"] + " " + u["context"])}
+        hits = set(keys) & ukeys
+        if len(hits) > len(best_hits) or (hits and len(hits) == len(best_hits) and (u["years"] or 0) > ((best or {}).get("years") or 0)):
+            best, best_hits = u, hits
+    found = [keys[k] for k in keys if k in best_hits]
+    missing = [keys[k] for k in keys if k not in best_hits]
+    if not best_hits:
+        return {"requirement": requirement, "status": "none", "covered": False, "evidence": [], "found": [], "missing": missing,
+                "reason": "No evidence in profile"}
+    text = best["text"]
+    if best.get("list"):  # quote only the matching items of a skills or languages list
+        text = ", ".join(i for i in best["list"] if {stem(w) for w in words(i)} & best_hits) or text
+    evidence = [{"text": text, "where": best["where"]}]
+    share = len(best_hits) / len(keys)
+    own = set(keys) & {stem(w) for w in words(best["text"])}  # the line itself, without its job title
+    strong = share >= 0.6 and len(own) * 2 >= len(keys)  # a job title alone ("Contract Cleaner") cannot carry a match
+    status, reason = ("supported", "") if strong else ("partial", "the profile shows " + ", ".join(found) + "; not " + ", ".join(missing))
+    if years_needed and status == "supported":
+        if best["years"] is None:
+            status, reason = "partial", f"the posting asks for {years_needed} years; this evidence has no dates"
+        elif best["years"] < years_needed:
+            status, reason = "partial", f"the posting asks for {years_needed} years; the profile shows about {best['years']}"
+    return {"requirement": requirement, "status": status, "covered": status == "supported", "evidence": evidence,
+            "found": found, "missing": missing, "reason": reason}
+
+
+def fit(profile, posting, today=None):
+    units = evidence_units(profile, today)
+    rows = [judge(r, units) for r in requirements(posting)]
+    points = {"supported": 1, "partial": 0.5, "none": 0}
+    score = round(100 * sum(points[r["status"]] for r in rows) / len(rows)) if rows else None
+    return {"score": score, "requirements": rows,
+            "counts": {k: sum(r["status"] == k for r in rows) for k in points}}
 
 
 # ---------------------------------------------------------------- rules (gates)
@@ -303,12 +392,26 @@ PROFILE:
 RULES:
 {rules}
 
+EVIDENCE (what the profile supports for each requirement of this posting):
+{evidence}
+Claim to meet a requirement only when it is SUPPORTED, using that evidence. For PARTIAL, state only what the evidence
+shows. Never claim a requirement marked NO EVIDENCE.
+
 JOB: {title} at {company}
 POSTING:
 <<<
 {posting}
 >>>
 {repair}"""
+
+
+def evidence_text(profile, job):
+    out = []
+    for r in fit(profile, job.get("posting", ""))["requirements"]:
+        label = {"supported": "SUPPORTED", "partial": "PARTIAL", "none": "NO EVIDENCE"}[r["status"]]
+        quote = f' <- "{r["evidence"][0]["text"]}" ({r["evidence"][0]["where"]})' if r["evidence"] else ""
+        out.append(f"- [{label}] {r['requirement']}{quote}" + (f" [{r['reason']}]" if r["reason"] and r["status"] == "partial" else ""))
+    return "\n".join(out) or "- (no requirement lines found)"
 
 
 def is_loopback(url):
@@ -339,7 +442,8 @@ def ask_model(settings, prompt, timeout=300):
         answer = json.load(opener.open(req, timeout=timeout))
         return answer["choices"][0]["message"].get("content") or ""
     if kind == "command":
-        cmd = shlex.split(m.get("command", ""))
+        raw = (m.get("command") or "").strip()
+        cmd = raw if os.name == "nt" else shlex.split(raw)  # Windows parses its own command line
         if not cmd:
             raise RuntimeError("no command set")
         done = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout, check=False)
@@ -381,7 +485,8 @@ def write_documents(job_id, use_model=True, today=None):
                 answer = ask_model(settings, PROMPT.format(profile=json.dumps(profile, ensure_ascii=False, indent=1),
                                                            rules=json.dumps(rules, ensure_ascii=False, indent=1),
                                                            title=job.get("title", ""), company=job.get("company", ""),
-                                                           posting=job.get("posting", "")[:12000], repair=repair))
+                                                           posting=job.get("posting", "")[:12000], repair=repair,
+                                                           evidence=evidence_text(profile, job)))
                 candidate = parse_json(answer)
             except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as exc:
                 notes.append(f"model: {exc}")

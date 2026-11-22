@@ -130,12 +130,89 @@ class Rules(Base):
 
 
 class Fit(Base):
-    def test_covered_and_missing_requirements(self):
-        f = app.fit(self.profile, POSTING)
-        rows = {r["requirement"]: r["covered"] for r in f["requirements"]}
-        self.assertTrue(rows["Strong Excel and reporting skills"])
-        self.assertFalse(rows["Knowledge of SAP S/4HANA is required"])
-        self.assertTrue(0 < f["score"] < 100)
+    def test_requirements_get_supported_partial_or_no_evidence_with_the_exact_profile_line(self):
+        rows = {r["requirement"]: r for r in app.fit(self.profile, POSTING)["requirements"]}
+        excel = rows["Strong Excel and reporting skills"]
+        self.assertEqual(excel["status"], "supported")
+        self.assertIn("Excel", excel["evidence"][0]["text"])  # an experience line or the skills list, quoted exactly
+        planning = rows["Experience with supplier follow-up and delivery planning"]
+        self.assertEqual(planning["status"], "supported")
+        self.assertIn("Example Logistics", planning["evidence"][0]["where"])
+        sap = rows["Knowledge of SAP S/4HANA is required"]
+        self.assertEqual(sap["status"], "none")
+        self.assertEqual(sap["evidence"], [])
+
+
+REQ = "Three years managing procurement contracts"
+
+
+def person(*experience, skills=(), summary=""):
+    return {"name": "Test Person", "summary": summary, "skills": list(skills),
+            "experience": [{"role": r, "company": c, "dates": d, "bullets": list(b)} for r, c, d, b in experience]}
+
+
+class Evidence(unittest.TestCase):
+    """Fictional profiles with overlapping keywords but different qualifications (none of them real)."""
+    TODAY = dt.date(2026, 6, 1)
+
+    def status(self, profile, requirement=REQ):
+        return app.judge(requirement, app.evidence_units(profile, self.TODAY))
+
+    def test_the_task_and_the_years_in_one_role_is_supported(self):
+        p = person(("Procurement Officer", "Example Council", "2019 - 2024", ["Managed procurement contracts for public tenders."]))
+        r = self.status(p)
+        self.assertEqual(r["status"], "supported")
+        self.assertEqual(r["evidence"][0]["text"], "Managed procurement contracts for public tenders.")
+        self.assertIn("2019 - 2024", r["evidence"][0]["where"])
+
+    def test_the_task_but_too_few_years_is_partial(self):
+        p = person(("Buyer", "Example Shop", "2025 - present", ["Managed procurement contracts with 12 suppliers."]))
+        r = self.status(p)
+        self.assertEqual(r["status"], "partial")
+        self.assertIn("about 1", r["reason"])
+
+    def test_keywords_scattered_over_unrelated_lines_are_not_supported(self):
+        p = person(("HR Assistant", "Sample Agency", "2015 - 2025", ["Reviewed employment contracts.", "Managed the office calendar."]),
+                   skills=["Procurement"])
+        self.assertNotEqual(self.status(p)["status"], "supported")
+
+    def test_a_skill_with_no_dates_cannot_prove_years(self):
+        p = person(("Clerk", "Sample Office", "2020 - 2026", ["Filed letters."]), skills=["Managing procurement contracts"])
+        r = self.status(p)
+        self.assertEqual(r["status"], "partial")
+        self.assertIn("no dates", r["reason"])
+
+    def test_nothing_related_is_no_evidence(self):
+        p = person(("Chef", "Sample Bistro", "2010 - 2026", ["Cooked lunch for 80 guests."]))
+        r = self.status(p)
+        self.assertEqual(r["status"], "none")
+        self.assertEqual(r["reason"], "No evidence in profile")
+
+    def test_launch_metric_no_false_supported_on_the_trap_set(self):
+        """How often the app says 'you meet this' when the profile does not support it: must be zero here."""
+        traps = [
+            (person(("Contract Cleaner", "Sample Services", "2012 - 2026", ["Managed cleaning rotas."])), REQ),
+            (person(("Teacher", "Sample School", "2010 - 2026", ["Taught procurement law basics to adults."])), REQ),
+            (person(("Analyst", "Sample Bank", "2024 - present", ["Managed procurement contracts reporting."])), REQ),
+            (person(("Driver", "Sample Transport", "2015 - 2026", ["Delivered parcels."]), skills=["Excel"]),
+             "Five years of SAP S/4HANA configuration"),
+            (person(("Receptionist", "Sample Hotel", "2018 - 2026", ["Answered phone calls in English."])),
+             "Fluent German and Dutch"),
+        ]
+        false_supported = [req for p, req in traps if self.status(p, req)["status"] == "supported"]
+        self.assertEqual(false_supported, [])
+
+    def test_drafts_only_claim_supported_requirements(self):
+        p = person(("Buyer", "Example Shop", "2025 - present", ["Managed procurement contracts with 12 suppliers."]), skills=["Excel"])
+        d = app.draft_without_model(p, {"title": "Buyer", "company": "Acme", "posting": "- " + REQ + "\n- Strong Excel skills"})
+        letter = " ".join(d["letter"]["paragraphs"])
+        self.assertNotIn("three years managing", letter.lower())
+
+    def test_the_model_prompt_carries_the_evidence_labels(self):
+        p = person(("Buyer", "Example Shop", "2025 - present", ["Managed procurement contracts."]))
+        text = app.evidence_text(p, {"posting": "- " + REQ + "\n- Knowledge of SAP is required"})
+        self.assertIn("[PARTIAL] Three years managing procurement contracts", text)
+        self.assertIn("[NO EVIDENCE] Knowledge of SAP is required", text)
 
 
 class ModelGuard(Base):
@@ -144,7 +221,7 @@ class ModelGuard(Base):
             app.ask_model({"model": {"kind": "local", "url": "https://api.example.com"}}, "hi")
 
     def test_a_command_model_reads_the_prompt(self):
-        settings = {"model": {"kind": "command", "command": f"{sys.executable} -c \"import sys; print(sys.stdin.read().upper())\""}}
+        settings = {"model": {"kind": "command", "command": f'"{sys.executable}" -c "import sys; print(sys.stdin.read().upper())"'}}
         self.assertIn("HELLO", app.ask_model(settings, "hello"))
 
     def test_a_model_answer_is_checked_and_repaired(self):

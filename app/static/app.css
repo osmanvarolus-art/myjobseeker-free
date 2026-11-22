@@ -24,3 +24,5 @@ aside{background:var(--card);border:1px solid var(--line);border-radius:10px;pad
 table{width:100%;border-collapse:collapse;font-size:14px}td{border-top:1px solid var(--line);padding:5px 6px;vertical-align:top}td.ok{color:var(--good)}td.no{color:var(--bad)}
 .problems{color:var(--bad)}.problems li{margin:2px 0}.okline{color:var(--good)}
 details summary{cursor:pointer;color:var(--accent);margin:8px 0}code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.st{white-space:nowrap;font-weight:600;width:1%}.st-supported{color:var(--good)}.st-partial{color:var(--warn)}.st-none{color:var(--bad)}
+.evidence{font-size:13px;margin-top:2px}.small{font-size:12px}

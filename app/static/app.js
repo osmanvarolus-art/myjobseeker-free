@@ -177,10 +177,16 @@ async function openJob(id) {
     el("div", {class: "card"},
       el("h2", {}, "Fit: ", el("span", {class: "score " + scoreClass(f.score)}, f.score === null ? "no requirement lines found" : f.score + "%"),
         " ", el("button", {class: "ghost small", onclick: refit}, "check again")),
+      f.counts ? el("p", {class: "muted"}, `${f.counts.supported} supported · ${f.counts.partial} partial · ${f.counts.none} with no evidence`) : null,
       f.requirements.length ? el("table", {}, ...f.requirements.map((r) => el("tr", {},
-        el("td", {class: r.covered ? "ok" : "no"}, r.covered ? "✓" : "✗"), el("td", {}, r.requirement),
-        el("td", {class: "muted"}, r.matched.join(", "))))) : el("p", {class: "muted"}, "The posting has no clear requirement lines. You can still write."),
-      el("p", {class: "muted"}, "✓ means your profile uses the posting's words. ✗ is a gap: be honest about it, or add a true fact to your profile.")),
+        el("td", {class: "st st-" + r.status}, {supported: "✓ Supported", partial: "◐ Partial", none: "✗ No evidence"}[r.status] || "?"),
+        el("td", {}, el("div", {}, r.requirement),
+          r.evidence && r.evidence.length
+            ? el("div", {class: "evidence"}, "“" + r.evidence[0].text + "” ", el("span", {class: "muted"}, "· " + r.evidence[0].where))
+            : el("div", {class: "evidence muted"}, "No evidence in profile"),
+          r.reason && r.status === "partial" ? el("div", {class: "muted small"}, r.reason) : null)))) :
+        el("p", {class: "muted"}, "The posting has no clear requirement lines. You can still write."),
+      el("p", {class: "muted"}, "Each requirement is checked against one line of your profile at a time. Supported means that line covers it (and the years, if the posting asks for years). Drafts only claim supported requirements. To turn a gap green, add a true line to your profile.")),
     el("div", {class: "row"},
       el("button", {id: "btnWrite", onclick: () => write(true), disabled: blocked ? "" : null}, writeLabel),
       el("button", {class: "ghost", onclick: () => write(false), disabled: blocked ? "" : null}, "Generate from my profile only (no model)"),
