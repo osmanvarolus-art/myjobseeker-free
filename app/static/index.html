@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyJobSeeker</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <div class="brand">MyJobSeeker <small>runs on your computer</small></div>
+  <nav>
+    <button data-tab="start" class="on">Start</button>
+    <button data-tab="profile">1. Profile</button>
+    <button data-tab="rules">2. Rules</button>
+    <button data-tab="model">3. Model</button>
+    <button data-tab="jobs">4. Jobs</button>
+  </nav>
+  <div id="quota" class="quota" title="Free tier: 3 CV + cover letter pairs per calendar month"></div>
+</header>
+
+<main>
+  <section id="tab-start" class="tab on">
+    <h1>Three steps, then paste a job</h1>
+    <ol id="checklist" class="checklist"></ol>
+    <div class="card muted">
+      <p><b>Free tier:</b> 3 CV + cover letter pairs per month. Writing the same job again, and every edit you make, is free.</p>
+      <p><b>Private by design:</b> your profile, rules and documents are saved only in <code id="datafolder"></code>. Nothing is uploaded.</p>
+    </div>
+  </section>
+
+  <section id="tab-profile" class="tab">
+    <h1>Your profile</h1>
+    <p class="muted">Only facts you write here ever reach a CV or letter. The checks refuse any employer or number that is not in this profile.</p>
+    <div class="row"><button id="loadExample" class="ghost">Fill with the example person</button><button id="saveProfile">Save profile</button><span id="profileMsg" class="msg"></span></div>
+    <div class="grid2">
+      <label>Full name<input id="p_name"></label>
+      <label>Headline (target title)<input id="p_headline"></label>
+      <label>City<input id="p_city"></label>
+      <label>E-mail<input id="p_email"></label>
+      <label>Phone<input id="p_phone"></label>
+      <label>Link (LinkedIn, portfolio)<input id="p_link"></label>
+    </div>
+    <label>Summary (3 sentences about you)<textarea id="p_summary" rows="3"></textarea></label>
+    <label>Availability (for the last line of a letter)<input id="p_availability"></label>
+    <h2>Experience <button id="addExp" class="ghost small">+ add a job</button></h2>
+    <div id="expList"></div>
+    <h2>Education <button id="addEdu" class="ghost small">+ add</button></h2>
+    <div id="eduList"></div>
+    <div class="grid2">
+      <label>Skills (one per line)<textarea id="p_skills" rows="6"></textarea></label>
+      <label>Languages (one per line)<textarea id="p_languages" rows="6"></textarea></label>
+    </div>
+    <div class="row"><button id="saveProfile2">Save profile</button></div>
+  </section>
+
+  <section id="tab-rules" class="tab">
+    <h1>Your writing rules</h1>
+    <p class="muted">Every CV and letter is checked against these rules. A model gets them too, and must repair any rule it breaks.</p>
+    <div class="grid2">
+      <label>Banned phrases (one per line)<textarea id="r_banned" rows="7"></textarea></label>
+      <label>The letter must mention (one per line)<textarea id="r_must" rows="7" placeholder="for example: available from June"></textarea></label>
+    </div>
+    <div class="grid3">
+      <label>Letter length: from<input id="r_lo" type="number" min="50"></label>
+      <label>to (words)<input id="r_hi" type="number" min="100"></label>
+      <label>Longest sentence (words)<input id="r_sent" type="number" min="10"></label>
+    </div>
+    <label class="check"><input id="r_numbers" type="checkbox"> Only numbers that are in my profile (no invented figures)</label>
+    <label>Extra numbers I allow (comma separated)<input id="r_allowed"></label>
+    <label class="check"><input id="r_dash" type="checkbox"> No em dashes (—)</label>
+    <label>Style notes for the model<textarea id="r_style" rows="3"></textarea></label>
+    <div class="row"><button id="saveRules">Save rules</button><span id="rulesMsg" class="msg"></span></div>
+  </section>
+
+  <section id="tab-model" class="tab">
+    <h1>Connect a model (optional)</h1>
+    <p class="muted">Without a model the app still checks fit and builds a first version from your own profile text. A model writes a more tailored one. Only a model on this computer is used: no API key, no bill.</p>
+    <label class="check"><input type="radio" name="mk" value="none"> No model</label>
+    <label class="check"><input type="radio" name="mk" value="local"> A local model server (Ollama, LM Studio, llama.cpp)</label>
+    <div class="indent grid2">
+      <label>Address<input id="m_url" placeholder="http://127.0.0.1:11434"></label>
+      <label>Model name<input id="m_name" placeholder="qwen3:8b"></label>
+    </div>
+    <label class="check"><input type="radio" name="mk" value="command"> A command I already use (reads the prompt, prints the answer)</label>
+    <div class="indent"><label>Command<input id="m_cmd" placeholder="claude -p"></label></div>
+    <div class="row"><button id="saveModel">Save</button><button id="testModel" class="ghost">Test the model</button><span id="modelMsg" class="msg"></span></div>
+  </section>
+
+  <section id="tab-jobs" class="tab">
+    <div class="split">
+      <aside>
+        <h2>Add a job</h2>
+        <label>Job title<input id="j_title"></label>
+        <label>Company<input id="j_company"></label>
+        <label>Link (optional)<input id="j_url"></label>
+        <label>Posting text (paste the whole ad)<textarea id="j_posting" rows="8"></textarea></label>
+        <button id="addJob">Add and check fit</button><span id="jobMsg" class="msg"></span>
+        <h2>Your jobs</h2>
+        <ul id="jobList" class="joblist"></ul>
+      </aside>
+      <article id="jobView"><p class="muted">Add a job, or pick one from the list.</p></article>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

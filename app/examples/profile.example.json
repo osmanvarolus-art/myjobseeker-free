@@ -1,0 +1,36 @@
+{
+  "name": "Jordan Example",
+  "headline": "Operations Coordinator",
+  "city": "Springfield",
+  "email": "jordan@example.com",
+  "phone": "+00 000 000 000",
+  "link": "linkedin.com/in/jordan-example",
+  "summary": "Operations coordinator with six years in warehouse planning and supplier follow-up. I keep schedules honest, fix the process behind a late order, and write the report that tells the team what changed.",
+  "availability": "I can start within one month.",
+  "experience": [
+    {
+      "role": "Operations Coordinator",
+      "company": "Example Logistics",
+      "dates": "2021 - present",
+      "bullets": [
+        "Plan weekly inbound deliveries for 40 suppliers and agree delivery slots with the warehouse team.",
+        "Rebuilt the late-order report in Excel, so planners see each delay and its cause on one page.",
+        "Train new team members on the order system and the daily checklist."
+      ]
+    },
+    {
+      "role": "Customer Service Agent",
+      "company": "Sample Retail",
+      "dates": "2018 - 2021",
+      "bullets": [
+        "Answered customer orders and complaints by phone and e-mail in English and Spanish.",
+        "Logged recurring product issues and passed them to the buying team every month."
+      ]
+    }
+  ],
+  "education": [
+    {"degree": "Bachelor of Business Administration", "school": "Example University", "dates": "2014 - 2018"}
+  ],
+  "skills": ["Supply planning", "Supplier follow-up", "Excel", "ERP order systems", "Reporting", "Process improvement", "Training"],
+  "languages": ["English (fluent)", "Spanish (fluent)"]
+}

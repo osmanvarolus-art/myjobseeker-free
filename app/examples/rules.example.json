@@ -1,0 +1,10 @@
+{
+  "banned_phrases": ["I am writing to apply", "passionate", "team player", "think outside the box", "synergy"],
+  "must_mention": [],
+  "allowed_numbers": [],
+  "numbers_from_profile_only": true,
+  "no_em_dash": true,
+  "letter_words": [120, 400],
+  "max_sentence_words": 35,
+  "style_notes": "Plain words. One idea per sentence. Name the posting's own terms where my profile truly supports them. Never claim a skill I do not have."
+}
